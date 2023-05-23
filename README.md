@@ -14,7 +14,7 @@
   
   Запуск тестов после входа в виртуальное окружения:  
 - python Games\manage.py test game.tests #windows  
-- python Games/manage.py test game.test #linux
+- python Games/manage.py test game.tests #linux
   
 links:  
 \user\  
