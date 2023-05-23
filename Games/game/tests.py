@@ -1,3 +1,4 @@
+import json
 from django.urls import reverse
 from .models import Game, User
 from datetime import datetime
@@ -21,7 +22,7 @@ class GameViewSetTests(TestCase):
                 'description': 'test description',
                 'stage_number':1,
                 'end_date': '20.04.2023'}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data=json.dumps(data), content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Game.objects.count(), 1)
         game = Game.objects.first()
@@ -31,19 +32,21 @@ class GameViewSetTests(TestCase):
                          'stage_number': game.stage_number,
                          'end_date': game.end_date.strftime('%d.%m.%Y')}
         self.assertEqual(data, expected_data)
+        cache.delete(f'game_{data["id"]}')
 
     def test_update_game(self):
-        game = Game.objects.create(name='test game',
+        game = Game.objects.create(id=10,
+                                   name='test game',
                                    description='test description',
                                    stage_number=1,
                                    end_date='2023-04-01')
         url = reverse('game-detail', args=[game.id])
-        data = {'id': 1,
+        data = {'id': 10,
                 'name': 'test game',
                 'description': 'updated description',
                 'stage_number': 1,
                 'end_date': '23.04.2023'}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data=json.dumps(data), content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         game.refresh_from_db()
         expected_data = {'id': game.id,
@@ -52,6 +55,7 @@ class GameViewSetTests(TestCase):
                          'stage_number': game.stage_number,
                          'end_date': game.end_date.strftime('%d.%m.%Y')}
         self.assertEqual(data, expected_data)
+        cache.delete(f'game_{game.id}')
 
     def test_retrieve_game(self):
         game = Game.objects.create(id=1,
@@ -68,6 +72,7 @@ class GameViewSetTests(TestCase):
                          'stage_number': game.stage_number,
                          'end_date': datetime.strptime(game.end_date, '%Y-%m-%d').strftime('%d.%m.%Y')}
         self.assertEqual(response.data, expected_data)
+        cache.delete(f'game_{game.id}')
 
 
 class UserViewSetTests(TestCase):
@@ -76,7 +81,7 @@ class UserViewSetTests(TestCase):
         self.client = APIClient()
 
     def test_create_user(self):
-        game = Game.objects.create(id = 1,
+        game = Game.objects.create(id = 10,
                                    name='test game',
                                    description='test description',
                                    stage_number=1,
@@ -87,7 +92,7 @@ class UserViewSetTests(TestCase):
                 'stage1': True,
                 'stage2': False,
                 'game': game.id}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data=json.dumps(data), content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 1)
         user = User.objects.first()
@@ -97,25 +102,26 @@ class UserViewSetTests(TestCase):
                          'stage2': user.stage2,
                          'game': user.game.id}
         self.assertEqual(data, expected_data)
+        cache.delete(f'game_{game.id}')
         
     def test_update_user(self):
-        game = Game.objects.create(id = 1,
+        game = Game.objects.create(id = 10,
                                    name='test game',
                                    description='test description',
                                    stage_number=1,
                                    end_date='2023-04-01')
-        user = User.objects.create(id=1,
+        user = User.objects.create(id=10,
                                    name='test user',
                                    stage1=True,
                                    stage2=False,
                                    game=game)
         url = reverse('user-detail', args=[user.id])
-        data = {'id': 1,
+        data = {'id': 10,
                 'name': 'updated user',
                 'stage1': True,
                 'stage2': False,
                 'game': game.id}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data=json.dumps(data), content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user.refresh_from_db()
         expected_data = {'id': user.id,
@@ -124,14 +130,15 @@ class UserViewSetTests(TestCase):
                          'stage2': user.stage2,
                          'game': user.game.id}
         self.assertEqual(data, expected_data)
+        cache.delete(f'game_{game.id}')
 
     def test_retrieve_user(self):
-        game = Game.objects.create(id = 1,
+        game = Game.objects.create(id = 10,
                                    name='test game',
                                    description='test description',
                                    stage_number=1,
                                    end_date='2023-04-01')
-        user = User.objects.create(id=1,
+        user = User.objects.create(id=10,
                                    name='test user',
                                    stage1=True,
                                    stage2=False,
@@ -152,12 +159,13 @@ class UserViewSetTests(TestCase):
             'game': game_dict,
         }
         self.assertEqual(response.data, expected_data)
+        cache.delete(f'game_{game.id}')
 
 
 class GameSerializerTests(TestCase):
 
     def test_serialize_game(self):
-        game = Game.objects.create(id = 1,
+        game = Game.objects.create(id = 10,
                                    name='test game',
                                    description='test description',
                                    stage_number=1,
@@ -169,9 +177,10 @@ class GameSerializerTests(TestCase):
                          'stage_number': game.stage_number,
                          'end_date': game.end_date}
         self.assertEqual(serializer.data, expected_data)
+        cache.delete(f'game_{game.id}')
 
     def test_serialize_game_caches_result(self):
-        game = Game.objects.create(id = 1,
+        game = Game.objects.create(id = 10,
                                    name='test game',
                                    description='test description',
                                    stage_number=1,
@@ -186,17 +195,18 @@ class GameSerializerTests(TestCase):
                          'stage_number': game.stage_number,
                          'end_date': game.end_date})
         self.assertIsNotNone(cache.get(cache_key))
+        cache.delete(f'game_{game.id}')
 
 
 class UserSerializerTests(TestCase):
 
     def test_serialize_user(self):
-        game = Game.objects.create(id = 1,
+        game = Game.objects.create(id = 10,
                                    name='test game',
                                    description='test description',
                                    stage_number=1,
                                    end_date='2023-04-01')
-        user = User.objects.create(id=1,
+        user = User.objects.create(id=10,
                                    name='test user',
                                    stage1=True,
                                    stage2=False,
@@ -215,3 +225,4 @@ class UserSerializerTests(TestCase):
             'game': game_dict
         }
         self.assertEqual(serializer.data, expected_data)
+        cache.delete(f'game_{game.id}')
